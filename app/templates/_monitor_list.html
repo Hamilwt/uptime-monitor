@@ -8,22 +8,22 @@
                 <th>Target</th>
                 <th>Uptime %</th>
                 <th>Last Response</th>
-                <th>Action</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for monitor in monitors %}
-                <!-- Derive state from database relationships -->
                 {% set total_checks = monitor.results|length %}
                 {% set up_checks = monitor.results|selectattr("is_up", "equalto", True)|list|length %}
                 {% set uptime = (up_checks / total_checks * 100)|round(1) if total_checks > 0 else 100.0 %}
-                
                 {% set latest = monitor.results|sort(attribute='checked_at')|last if total_checks > 0 else none %}
                 {% set open_incident = monitor.incidents|selectattr("resolved_at", "none")|list|first if monitor.incidents else none %}
                 
-                <tr>
+                <tr {% if not monitor.is_active %}style="opacity: 0.5;"{% endif %}>
                     <td>
-                        {% if open_incident %}
+                        {% if not monitor.is_active %}
+                            <span style="color: grey;">PAUSED</span>
+                        {% elif open_incident %}
                             <mark style="background-color: #ffcccc; color: #cc0000; padding: 0.2rem 0.5rem; border-radius: 4px;">
                                 <strong>DOWN</strong>
                             </mark>
@@ -65,16 +65,36 @@
                         {% endif %}
                     </td>
                     <td>
-                        <!-- Forces an out-of-schedule check via Celery and updates the UI instantly -->
-                        <button class="outline" 
-                                hx-post="/monitors/{{ monitor.id }}/check-now" 
-                                hx-target="#monitor-list"
-                                style="padding: 0.2rem 0.5rem; font-size: 0.8rem; margin: 0;">
-                            Force Check
-                        </button>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="outline" hx-post="/monitors/{{ monitor.id }}/check-now" hx-target="#monitor-list" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; margin: 0;">Check</button>
+                            <button class="outline secondary" hx-post="/monitors/{{ monitor.id }}/pause" hx-target="#monitor-list" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; margin: 0;">
+                                {% if monitor.is_active %}Pause{% else %}Resume{% endif %}
+                            </button>
+                            <button class="outline contrast" hx-delete="/monitors/{{ monitor.id }}" hx-target="#monitor-list" hx-confirm="Delete this monitor?" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; margin: 0;">Delete</button>
+                        </div>
                     </td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <hr>
+    
+    <article>
+        <header>Recent Incidents (Resolved)</header>
+        {% if not recent_incidents %}
+            <p><small>No resolved incidents recorded.</small></p>
+        {% else %}
+            <ul>
+                {% for incident in recent_incidents %}
+                    {% set duration = incident.resolved_at - incident.started_at %}
+                    <li>
+                        <strong>{{ incident.monitor.name }}</strong> went down at {{ incident.started_at.strftime('%H:%M:%S') }} 
+                        and recovered at {{ incident.resolved_at.strftime('%H:%M:%S') }} 
+                        <span style="color: grey;">(Duration: {{ duration.seconds // 60 }}m {{ duration.seconds % 60 }}s)</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </article>
 {% endif %}
