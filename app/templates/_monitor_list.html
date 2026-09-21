@@ -1,0 +1,80 @@
+{% if not monitors %}
+    <p><em>No monitors configured yet. Add one above.</em></p>
+{% else %}
+    <table role="grid">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Target</th>
+                <th>Uptime %</th>
+                <th>Last Response</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for monitor in monitors %}
+                <!-- Derive state from database relationships -->
+                {% set total_checks = monitor.results|length %}
+                {% set up_checks = monitor.results|selectattr("is_up", "equalto", True)|list|length %}
+                {% set uptime = (up_checks / total_checks * 100)|round(1) if total_checks > 0 else 100.0 %}
+                
+                {% set latest = monitor.results|sort(attribute='checked_at')|last if total_checks > 0 else none %}
+                {% set open_incident = monitor.incidents|selectattr("resolved_at", "none")|list|first if monitor.incidents else none %}
+                
+                <tr>
+                    <td>
+                        {% if open_incident %}
+                            <mark style="background-color: #ffcccc; color: #cc0000; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                                <strong>DOWN</strong>
+                            </mark>
+                        {% elif latest and latest.is_up %}
+                            <mark style="background-color: #ccffcc; color: #006600; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                                <strong>UP</strong>
+                            </mark>
+                        {% else %}
+                            <span style="color: grey;">PENDING</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong>{{ monitor.name }}</strong><br>
+                        <small><a href="{{ monitor.url }}" target="_blank">{{ monitor.url }}</a></small>
+                        {% if open_incident %}
+                            <br>
+                            <small style="color: #cc0000;">
+                                Outage started: {{ open_incident.started_at.strftime('%H:%M:%S UTC') }}
+                            </small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if total_checks > 0 %}
+                            {{ uptime }}% <br><small>({{ total_checks }} checks)</small>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if latest %}
+                            {% if latest.is_up %}
+                                {{ latest.response_time_ms }} ms
+                            {% else %}
+                                <small style="color: red;">{{ latest.error_message or ('HTTP ' ~ latest.status_code) }}</small>
+                            {% endif %}
+                            <br><small>at {{ latest.checked_at.strftime('%H:%M:%S') }}</small>
+                        {% else %}
+                            Waiting for worker...
+                        {% endif %}
+                    </td>
+                    <td>
+                        <!-- Forces an out-of-schedule check via Celery and updates the UI instantly -->
+                        <button class="outline" 
+                                hx-post="/monitors/{{ monitor.id }}/check-now" 
+                                hx-target="#monitor-list"
+                                style="padding: 0.2rem 0.5rem; font-size: 0.8rem; margin: 0;">
+                            Force Check
+                        </button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
