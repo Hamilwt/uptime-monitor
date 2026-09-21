@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+jinja2
+sqlalchemy
+psycopg2-binary
+alembic
+pydantic-settings
+celery[redis]>=5.5,<6.0
+redis>=4.5.2,<5.3
+httpx
+python-multipart
