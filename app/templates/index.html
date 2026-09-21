@@ -1,48 +1,82 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-slate-950 text-slate-300 antialiased selection:bg-blue-500/30">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uptime Monitor Dashboard</title>
-    <!-- HTMX for live polling without WebSockets -->
+    <title>Uptime Dashboard</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <!-- PicoCSS for clean, automatic styling -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .htmx-swapping { opacity: 0.6; transition: opacity 200ms ease-in-out; }
+        #monitor-list { transition: opacity 200ms ease-in-out; }
+        /* Hide scrollbar for the ping history if it overflows on tiny screens */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
-<body>
-    <main class="container">
-        <hgroup>
-            <h1>Asynchronous Uptime Monitor</h1>
-            <h2>Background workers execute checks. HTMX polls the results.</h2>
-        </hgroup>
-        
-        <article>
-            <header>Register a Website</header>
-            <!-- 
-              hx-post submits the form via AJAX.
-              hx-target tells HTMX to take the HTML response and inject it into #monitor-list.
-            -->
-            <form hx-post="/monitors" hx-target="#monitor-list" hx-swap="innerHTML">
-                <div class="grid">
-                    <input type="text" name="name" placeholder="Website Name (e.g. Google)" required>
-                    <input type="url" name="url" placeholder="https://google.com" required>
-                    <select name="interval">
-                        <option value="15">Every 15 Seconds (Demo)</option>
-                        <option value="60" selected>Every 1 Minute</option>
-                        <option value="300">Every 5 Minutes</option>
-                    </select>
+<body class="min-h-screen flex flex-col">
+    
+    <!-- Premium Top Navigation -->
+    <nav class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 </div>
-                <button type="submit">Start Monitoring</button>
-            </form>
-        </article>
+                <span class="text-lg font-semibold text-white tracking-tight">Uptime Dashboard</span>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-full border border-slate-800">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Workers Active</span>
+            </div>
+        </div>
+    </nav>
 
-        <!-- 
-          THE DISPATCHER: This div fetches fresh data every 5 seconds.
-          Because it swaps innerHTML, the page never reloads or flashes.
-        -->
-        <div id="monitor-list" hx-get="/monitors/fragment" hx-trigger="every 5s" hx-swap="innerHTML">
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+        
+        <!-- Add Monitor Action Bar -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-2 shadow-sm">
+            <form hx-post="/monitors" hx-target="#monitor-list" hx-swap="innerHTML" class="flex flex-col md:flex-row gap-2">
+                <input type="text" name="name" placeholder="Friendly Name (e.g. Production API)" required
+                    class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                <input type="url" name="url" placeholder="https://..." required
+                    class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                <select name="interval" 
+                    class="w-40 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer">
+                    <option value="15">15 Seconds</option>
+                    <option value="60" selected>1 Minute</option>
+                    <option value="300">5 Minutes</option>
+                </select>
+                <button type="submit" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-6 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Monitor
+                </button>
+            </form>
+        </div>
+
+        <!-- Dynamic HTMX Container (Includes Summary Cards + Monitor List) -->
+        <div id="monitor-list" hx-get="/monitors/fragment" hx-trigger="every 5s" hx-swap="innerHTML transition:true">
             {% include "_monitor_list.html" %}
         </div>
+        
     </main>
 </body>
 </html>
