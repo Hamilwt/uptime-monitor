@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uptime Monitor Dashboard</title>
+    <!-- HTMX for live polling without WebSockets -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- PicoCSS for clean, automatic styling -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+</head>
+<body>
+    <main class="container">
+        <hgroup>
+            <h1>Asynchronous Uptime Monitor</h1>
+            <h2>Background workers execute checks. HTMX polls the results.</h2>
+        </hgroup>
+        
+        <article>
+            <header>Register a Website</header>
+            <!-- 
+              hx-post submits the form via AJAX.
+              hx-target tells HTMX to take the HTML response and inject it into #monitor-list.
+            -->
+            <form hx-post="/monitors" hx-target="#monitor-list" hx-swap="innerHTML">
+                <div class="grid">
+                    <input type="text" name="name" placeholder="Website Name (e.g. Google)" required>
+                    <input type="url" name="url" placeholder="https://google.com" required>
+                    <select name="interval">
+                        <option value="15">Every 15 Seconds (Demo)</option>
+                        <option value="60" selected>Every 1 Minute</option>
+                        <option value="300">Every 5 Minutes</option>
+                    </select>
+                </div>
+                <button type="submit">Start Monitoring</button>
+            </form>
+        </article>
+
+        <!-- 
+          THE DISPATCHER: This div fetches fresh data every 5 seconds.
+          Because it swaps innerHTML, the page never reloads or flashes.
+        -->
+        <div id="monitor-list" hx-get="/monitors/fragment" hx-trigger="every 5s" hx-swap="innerHTML">
+            {% include "_monitor_list.html" %}
+        </div>
+    </main>
+</body>
+</html>
