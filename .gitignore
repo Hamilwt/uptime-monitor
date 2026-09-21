@@ -10,3 +10,7 @@ venv/
 
 # OS Files
 .DS_Store
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
