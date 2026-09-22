@@ -1,0 +1,42 @@
+
+<div id="edit-modal-backdrop" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick="event.stopPropagation()">
+
+        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+            <h3 class="text-lg font-semibold text-white">Edit Monitor</h3>
+            <button onclick="document.getElementById('edit-modal-backdrop').remove()" class="text-slate-400 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <form hx-post="/monitors/{{ monitor.id }}/edit" hx-target="#monitor-list" hx-swap="innerHTML" onsubmit="document.getElementById('edit-modal-backdrop').remove()" class="p-6 space-y-4">
+
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Friendly Name</label>
+                <input type="text" name="name" value="{{ monitor.name }}" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Target URL</label>
+                <input type="url" name="url" value="{{ monitor.url }}" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Check Interval</label>
+                <select name="interval" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                    <option value="15" {% if monitor.check_interval_seconds == 15 %}selected{% endif %}>15 Seconds</option>
+                    <option value="60" {% if monitor.check_interval_seconds == 60 %}selected{% endif %}>1 Minute</option>
+                    <option value="300" {% if monitor.check_interval_seconds == 300 %}selected{% endif %}>5 Minutes</option>
+                </select>
+            </div>
+
+            <div class="pt-4 flex gap-3 justify-end">
+                <button type="button" onclick="document.getElementById('edit-modal-backdrop').remove()" class="px-5 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 transition-all">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
