@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, Form, Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, joinedload
 from datetime import datetime
 
 from app.db.session import SessionLocal
@@ -22,18 +22,23 @@ def get_db():
 def get_dashboard_context(db: Session) -> dict:
     """
     Helper to fetch all required dashboard data efficiently.
-    selectinload() solves the N+1 bug by fetching all related results 
-    and incidents in exactly two supplementary bulk queries, regardless of monitor count.
+    selectinload() solves N+1 for monitor child collections (results/incidents).
+    joinedload() executes a single SQL JOIN to eager-load the parent monitor on recent incidents.
     """
     monitors = db.query(Monitor).options(
         selectinload(Monitor.results),
         selectinload(Monitor.incidents)
     ).order_by(Monitor.created_at.desc()).all()
     
-    # Fetch recently resolved incidents for the new history panel
-    recent_incidents = db.query(Incident).filter(
-        Incident.resolved_at.is_not(None)
-    ).order_by(Incident.resolved_at.desc()).limit(10).all()
+    # Eagerly load the parent monitor via JOIN to eliminate N+1 queries during rendering
+    recent_incidents = (
+        db.query(Incident)
+        .filter(Incident.resolved_at.is_not(None))
+        .options(joinedload(Incident.monitor))
+        .order_by(Incident.resolved_at.desc())
+        .limit(10)
+        .all()
+    )
     
     return {"monitors": monitors, "recent_incidents": recent_incidents}
 
